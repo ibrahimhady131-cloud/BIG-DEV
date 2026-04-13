@@ -14,7 +14,7 @@ class UserRegisterRequest(BaseModel):
     phone: str = Field(..., pattern=r"^\+20\d{10}$")  # Egyptian phone format
     password: str = Field(..., min_length=8, max_length=128)
     full_name: str = Field(..., min_length=2, max_length=255)
-    role: str = Field(default="client_individual")
+    role: str = Field(default="client_individual", pattern=r"^(client_individual|client_enterprise|driver)$")
     region_code: str = Field(..., pattern=r"^EG-[A-Z]{3}$")
     national_id: str | None = Field(None, pattern=r"^\d{14}$")
 

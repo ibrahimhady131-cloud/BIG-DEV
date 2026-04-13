@@ -33,12 +33,17 @@ _users_db: dict[str, dict] = {}
 @router.post("/auth/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(request: UserRegisterRequest) -> TokenResponse:
     """Register a new user account."""
-    # Check for duplicate email
+    # Check for duplicate email or phone
     for user in _users_db.values():
         if user["email"] == request.email:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Email already registered",
+            )
+        if user["phone"] == request.phone:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Phone number already registered",
             )
 
     import uuid
@@ -148,9 +153,18 @@ async def get_user(user_id: str) -> UserResponse:
 async def update_user(
     user_id: str,
     request: UserUpdateRequest,
-    _current_user: Annotated[dict, Depends(get_current_user)],
+    current_user: Annotated[dict, Depends(get_current_user)],
 ) -> UserResponse:
-    """Update a user's profile."""
+    """Update a user's profile. Users can only edit their own profile unless they have USERS_WRITE permission."""
+    # Authorization: must be own profile or have admin permission
+    is_own_profile = current_user.sub == user_id
+    has_admin_perm = Permission.USERS_WRITE in getattr(current_user, "permissions", set())
+    if not is_own_profile and not has_admin_perm:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only update your own profile",
+        )
+
     user = _users_db.get(user_id)
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
