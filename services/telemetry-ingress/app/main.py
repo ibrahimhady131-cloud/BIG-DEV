@@ -7,6 +7,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
 
+from naql_common.db.deps import close_all, init_timescale
+
 from .core.config import settings
 from .processing.processor import MessageProcessor
 
@@ -87,7 +89,16 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Application lifecycle manager."""
     print(f"Starting {settings.SERVICE_NAME} on port {settings.SERVICE_PORT}")
     print(f"MQTT Broker: {settings.MQTT_BROKER_HOST}:{settings.MQTT_BROKER_PORT}")
+    if settings.TIMESCALE_URL and settings.TIMESCALE_URL != "sqlite://":
+        try:
+            init_timescale(settings.TIMESCALE_URL)
+            print(f"  Connected to TimescaleDB: {settings.TIMESCALE_URL.split('@')[-1]}")
+        except Exception as e:
+            print(f"  WARNING: TimescaleDB not available ({e}), using in-memory buffer")
+    else:
+        print("  Using in-memory buffer (no TIMESCALE_URL configured)")
     yield
+    await close_all()
     print(f"Shutting down {settings.SERVICE_NAME}")
 
 
