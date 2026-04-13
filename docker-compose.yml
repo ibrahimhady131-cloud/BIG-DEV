@@ -1,0 +1,235 @@
+# Naql.ai — Local Development Docker Compose
+# Starts all infrastructure services + microservices
+
+services:
+  # ============================================================
+  # Infrastructure
+  # ============================================================
+
+  cockroachdb:
+    image: cockroachdb/cockroach:v24.1.0
+    command: start-single-node --insecure --store=attrs=ssd,path=/cockroach/cockroach-data
+    ports:
+      - "26257:26257"   # SQL
+      - "8080:8080"     # Admin UI
+    volumes:
+      - cockroach_data:/cockroach/cockroach-data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: naql_telemetry
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis/redis-stack:latest
+    ports:
+      - "6379:6379"     # Redis
+      - "8101:8001"     # RedisInsight (remapped to avoid conflict with identity-service)
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nats:
+    image: nats:2.10-alpine
+    command: ["-js", "-m", "8222"]
+    ports:
+      - "4222:4222"     # Client
+      - "8222:8222"     # Monitoring
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8222/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  emqx:
+    image: emqx/emqx:5.5
+    ports:
+      - "1883:1883"     # MQTT
+      - "8083:8083"     # MQTT/WS
+      - "18083:18083"   # Dashboard
+    environment:
+      EMQX_NAME: naql_emqx
+      EMQX_HOST: 0.0.0.0
+    volumes:
+      - emqx_data:/opt/emqx/data
+
+  # ============================================================
+  # Microservices
+  # ============================================================
+
+  identity-service:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: identity-service
+    ports:
+      - "8001:8001"
+    environment:
+      IDENTITY_SERVICE_PORT: "8001"
+      IDENTITY_DATABASE_URL: "postgresql+asyncpg://root@cockroachdb:26257/naql_identity"
+      IDENTITY_NATS_URL: "nats://nats:4222"
+      IDENTITY_REDIS_URL: "redis://redis:6379/0"
+    depends_on:
+      cockroachdb:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - services
+
+  fleet-service:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: fleet-service
+    ports:
+      - "8002:8002"
+    environment:
+      FLEET_SERVICE_PORT: "8002"
+      FLEET_DATABASE_URL: "postgresql+asyncpg://root@cockroachdb:26257/naql_fleet"
+      FLEET_NATS_URL: "nats://nats:4222"
+      FLEET_REDIS_URL: "redis://redis:6379/1"
+    depends_on:
+      cockroachdb:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - services
+
+  matching-engine:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: matching-engine
+    ports:
+      - "8003:8003"
+    environment:
+      MATCHING_SERVICE_PORT: "8003"
+      MATCHING_DATABASE_URL: "postgresql+asyncpg://root@cockroachdb:26257/naql_matching"
+      MATCHING_NATS_URL: "nats://nats:4222"
+      MATCHING_REDIS_URL: "redis://redis:6379/2"
+    depends_on:
+      cockroachdb:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - services
+
+  fintrack-service:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: fintrack-service
+    ports:
+      - "8004:8004"
+    environment:
+      FINTRACK_SERVICE_PORT: "8004"
+      FINTRACK_DATABASE_URL: "postgresql+asyncpg://root@cockroachdb:26257/naql_fintrack"
+      FINTRACK_NATS_URL: "nats://nats:4222"
+      FINTRACK_REDIS_URL: "redis://redis:6379/3"
+    depends_on:
+      cockroachdb:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - services
+
+  agent-orchestrator:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: agent-orchestrator
+    ports:
+      - "8005:8005"
+    environment:
+      AGENT_SERVICE_PORT: "8005"
+      AGENT_NATS_URL: "nats://nats:4222"
+      AGENT_IDENTITY_SERVICE_URL: "http://identity-service:8001"
+      AGENT_FLEET_SERVICE_URL: "http://fleet-service:8002"
+      AGENT_MATCHING_SERVICE_URL: "http://matching-engine:8003"
+      AGENT_FINTRACK_SERVICE_URL: "http://fintrack-service:8004"
+    depends_on:
+      nats:
+        condition: service_healthy
+    profiles:
+      - services
+
+  telemetry-ingress:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: telemetry-ingress
+    ports:
+      - "8006:8006"
+    environment:
+      TELEMETRY_SERVICE_PORT: "8006"
+      TELEMETRY_MQTT_BROKER_HOST: "emqx"
+      TELEMETRY_TIMESCALE_URL: "postgresql+asyncpg://postgres:postgres@timescaledb:5432/naql_telemetry"
+      TELEMETRY_REDIS_URL: "redis://redis:6379/4"
+      TELEMETRY_NATS_URL: "nats://nats:4222"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - services
+
+  graphql-gateway:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.gateway
+    ports:
+      - "4000:4000"
+    environment:
+      GATEWAY_PORT: "4000"
+    depends_on:
+      nats:
+        condition: service_healthy
+    profiles:
+      - services
+
+volumes:
+  cockroach_data:
+  timescale_data:
+  redis_data:
+  emqx_data:
