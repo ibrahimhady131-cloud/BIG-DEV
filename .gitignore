@@ -52,6 +52,11 @@ htmlcov/
 *.log
 logs/
 
+# Node / Frontend
+node_modules/
+.next/
+out/
+
 # Terraform
 .terraform/
 *.tfstate
