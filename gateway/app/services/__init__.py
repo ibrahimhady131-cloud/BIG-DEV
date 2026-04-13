@@ -98,9 +98,9 @@ class ServiceClient:
     # ── FinTrack Service ───────────────────────────────────────
 
     async def get_balance(self, user_id: str) -> dict[str, Any] | None:
-        """GET /api/v1/wallets/{user_id}/balance → FinTrack Service."""
+        """GET /api/v1/balance/{user_id} → FinTrack Service."""
         resp = await self._client.get(
-            f"{self._fintrack_url}/api/v1/wallets/{user_id}/balance"
+            f"{self._fintrack_url}/api/v1/balance/{user_id}"
         )
         if resp.status_code == 404:
             return None
@@ -108,9 +108,9 @@ class ServiceClient:
         return resp.json()
 
     async def get_quote(self, data: dict[str, Any]) -> dict[str, Any]:
-        """POST /api/v1/pricing/quote → FinTrack Service."""
+        """POST /api/v1/quotes → FinTrack Service."""
         resp = await self._client.post(
-            f"{self._fintrack_url}/api/v1/pricing/quote", json=data
+            f"{self._fintrack_url}/api/v1/quotes", json=data
         )
         resp.raise_for_status()
         return resp.json()
@@ -118,7 +118,7 @@ class ServiceClient:
     # ── Agent Orchestrator ─────────────────────────────────────
 
     async def chat(self, data: dict[str, Any]) -> dict[str, Any]:
-        """POST /api/v1/agent/chat → Agent Orchestrator."""
-        resp = await self._client.post(f"{self._agent_url}/api/v1/agent/chat", json=data)
+        """POST /api/v1/chat → Agent Orchestrator."""
+        resp = await self._client.post(f"{self._agent_url}/api/v1/chat", json=data)
         resp.raise_for_status()
         return resp.json()
