@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import UTC, timedelta
 from typing import Annotated
 
+import bcrypt as _bcrypt
 from fastapi import APIRouter, Depends, HTTPException, status
-from passlib.hash import bcrypt
 
 from naql_common.auth import AuthManager, Permission, UserRole
 
@@ -50,7 +50,7 @@ async def register(request: UserRegisterRequest) -> TokenResponse:
     from datetime import datetime
 
     user_id = str(uuid.uuid4())
-    password_hash = bcrypt.hash(request.password)
+    password_hash = _bcrypt.hashpw(request.password.encode(), _bcrypt.gensalt()).decode()
 
     user_data = {
         "id": user_id,
@@ -98,7 +98,7 @@ async def login(request: UserLoginRequest) -> TokenResponse:
             user = u
             break
 
-    if user is None or not bcrypt.verify(request.password, user["password_hash"]):
+    if user is None or not _bcrypt.checkpw(request.password.encode(), user["password_hash"].encode()):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",

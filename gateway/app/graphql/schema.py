@@ -6,6 +6,8 @@ from datetime import datetime
 
 import strawberry
 
+from ..services import ServiceClient
+
 # ── Types ──────────────────────────────────────────────────
 
 
@@ -197,6 +199,19 @@ class ChatInput:
     language: str = "en"
 
 
+# ── Service client singleton ──────────────────────────────
+
+_client: ServiceClient | None = None
+
+
+def get_service_client() -> ServiceClient:
+    """Get or create the service client singleton."""
+    global _client
+    if _client is None:
+        _client = ServiceClient()
+    return _client
+
+
 # ── Queries ────────────────────────────────────────────────
 
 
@@ -207,18 +222,68 @@ class Query:
     @strawberry.field
     async def me(self, info: strawberry.types.Info) -> User | None:
         """Get current authenticated user."""
-        # Would call Identity Service via gRPC/HTTP
-        return None
+        request = info.context["request"]
+        auth_header = request.headers.get("authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return None
+        token = auth_header.removeprefix("Bearer ")
+        client = get_service_client()
+        data = await client.get_me(token)
+        if data is None:
+            return None
+        return User(
+            id=data["id"],
+            email=data["email"],
+            phone=data["phone"],
+            full_name=data["full_name"],
+            role=data["role"],
+            kyc_status=data["kyc_status"],
+            reputation_score=data["reputation_score"],
+            region_code=data["region_code"],
+            is_active=data["is_active"],
+            created_at=datetime.fromisoformat(str(data["created_at"])),
+        )
 
     @strawberry.field
     async def user(self, user_id: str) -> User | None:
         """Get a user by ID."""
-        return None
+        client = get_service_client()
+        data = await client.get_user(user_id)
+        if data is None:
+            return None
+        return User(
+            id=data["id"],
+            email=data["email"],
+            phone=data["phone"],
+            full_name=data["full_name"],
+            role=data["role"],
+            kyc_status=data["kyc_status"],
+            reputation_score=data["reputation_score"],
+            region_code=data["region_code"],
+            is_active=data["is_active"],
+            created_at=datetime.fromisoformat(str(data["created_at"])),
+        )
 
     @strawberry.field
     async def truck(self, truck_id: str) -> Truck | None:
         """Get a truck by ID."""
-        return None
+        client = get_service_client()
+        data = await client.get_truck(truck_id)
+        if data is None:
+            return None
+        return Truck(
+            id=data["id"],
+            owner_id=data["owner_id"],
+            license_plate=data["license_plate"],
+            truck_type=data["truck_type"],
+            load_capacity_kg=data["load_capacity_kg"],
+            status=data["status"],
+            region_code=data["region_code"],
+            has_refrigeration=data.get("has_refrigeration", False),
+            vin=data.get("vin"),
+            make=data.get("make"),
+            model=data.get("model"),
+        )
 
     @strawberry.field
     async def trucks(
@@ -229,17 +294,46 @@ class Query:
         region_code: str | None = None,
     ) -> list[Truck]:
         """List trucks with filtering."""
-        return []
+        client = get_service_client()
+        items = await client.list_trucks(
+            page=page, page_size=page_size, truck_type=truck_type, region_code=region_code
+        )
+        return [
+            Truck(
+                id=t["id"],
+                owner_id=t["owner_id"],
+                license_plate=t["license_plate"],
+                truck_type=t["truck_type"],
+                load_capacity_kg=t["load_capacity_kg"],
+                status=t["status"],
+                region_code=t["region_code"],
+                has_refrigeration=t.get("has_refrigeration", False),
+                vin=t.get("vin"),
+                make=t.get("make"),
+                model=t.get("model"),
+            )
+            for t in items
+        ]
 
     @strawberry.field
     async def shipment(self, shipment_id: str) -> Shipment | None:
         """Get a shipment by ID."""
+        # Shipment service not yet implemented; placeholder
         return None
 
     @strawberry.field
     async def balance(self, user_id: str) -> Balance | None:
         """Get user account balance."""
-        return None
+        client = get_service_client()
+        data = await client.get_balance(user_id)
+        if data is None:
+            return None
+        return Balance(
+            user_id=data.get("user_id", user_id),
+            available_egp=data["available_egp"],
+            held_egp=data["held_egp"],
+            total_egp=data["total_egp"],
+        )
 
     @strawberry.field
     async def telemetry_stats(self) -> TelemetryStats:
@@ -256,52 +350,107 @@ class Mutation:
 
     @strawberry.mutation
     async def register(self, input: RegisterInput) -> AuthPayload:
-        """Register a new user."""
-        # Would call Identity Service
+        """Register a new user via Identity Service."""
+        client = get_service_client()
+        data = await client.register({
+            "email": input.email,
+            "phone": input.phone,
+            "password": input.password,
+            "full_name": input.full_name,
+            "role": input.role,
+            "region_code": input.region_code,
+            "national_id": input.national_id,
+        })
         return AuthPayload(
-            user_id="placeholder",
-            access_token="placeholder",
-            refresh_token="placeholder",
-            role=input.role,
-            region_code=input.region_code,
+            user_id=data["user_id"],
+            access_token=data["access_token"],
+            refresh_token=data["refresh_token"],
+            role=data["role"],
+            region_code=data["region_code"],
         )
 
     @strawberry.mutation
     async def login(self, input: LoginInput) -> AuthPayload:
-        """Login and get authentication tokens."""
+        """Login via Identity Service."""
+        client = get_service_client()
+        data = await client.login(input.email, input.password)
         return AuthPayload(
-            user_id="placeholder",
-            access_token="placeholder",
-            refresh_token="placeholder",
-            role="client_individual",
-            region_code="EG-CAI",
+            user_id=data["user_id"],
+            access_token=data["access_token"],
+            refresh_token=data["refresh_token"],
+            role=data["role"],
+            region_code=data["region_code"],
         )
 
     @strawberry.mutation
     async def request_match(self, input: MatchRequestInput) -> MatchResult:
-        """Request a truck/driver match for a shipment."""
-        return MatchResult(match_id="placeholder", candidates=[], total_searched=0)
+        """Request a truck/driver match via Matching Engine."""
+        client = get_service_client()
+        data = await client.request_match({
+            "shipment_id": input.shipment_id,
+            "origin": {"latitude": input.origin.latitude, "longitude": input.origin.longitude},
+            "destination": {"latitude": input.destination.latitude, "longitude": input.destination.longitude},
+            "required_truck_type": input.required_truck_type,
+            "weight_kg": input.weight_kg,
+            "requires_refrigeration": input.requires_refrigeration,
+            "search_radius_km": input.search_radius_km,
+        })
+        candidates = [
+            MatchCandidate(
+                driver_id=c["driver_id"],
+                truck_id=c["truck_id"],
+                truck_type=c["truck_type"],
+                score=c["score"],
+                distance_km=c["distance_km"],
+                eta_minutes=c["eta_minutes"],
+                driver_rating=c["driver_rating"],
+            )
+            for c in data.get("candidates", [])
+        ]
+        return MatchResult(
+            match_id=data.get("match_id", ""),
+            candidates=candidates,
+            total_searched=data.get("total_searched", 0),
+        )
 
     @strawberry.mutation
     async def get_quote(self, input: QuoteInput) -> PriceQuote:
-        """Get a price quote for a shipment."""
+        """Get a price quote via FinTrack Service."""
+        client = get_service_client()
+        data = await client.get_quote({
+            "distance_km": input.distance_km,
+            "truck_type": input.truck_type,
+            "weight_kg": input.weight_kg,
+            "origin_region": input.origin_region,
+            "dest_region": input.dest_region,
+            "requires_refrigeration": input.requires_refrigeration,
+        })
         return PriceQuote(
-            quote_id="placeholder",
-            total_egp=0.0,
-            fuel_cost_egp=0.0,
-            toll_cost_egp=0.0,
-            service_fee_egp=0.0,
-            insurance_fee_egp=0.0,
-            valid_until=datetime.now(),
+            quote_id=data.get("quote_id", ""),
+            total_egp=data["total_egp"],
+            fuel_cost_egp=data.get("fuel_cost_egp", 0.0),
+            toll_cost_egp=data.get("toll_cost_egp", 0.0),
+            service_fee_egp=data.get("service_fee_egp", 0.0),
+            insurance_fee_egp=data.get("insurance_fee_egp", 0.0),
+            valid_until=datetime.fromisoformat(str(data["valid_until"]))
+            if "valid_until" in data
+            else datetime.now(),
         )
 
     @strawberry.mutation
     async def chat(self, input: ChatInput) -> ChatResponse:
         """Send a message to the Naql.ai AI agent."""
+        client = get_service_client()
+        data = await client.chat({
+            "user_id": input.user_id,
+            "message": input.message,
+            "session_id": input.session_id,
+            "language": input.language,
+        })
         return ChatResponse(
-            session_id="placeholder",
-            response="placeholder",
-            intent="general",
+            session_id=data.get("session_id", ""),
+            response=data.get("response", ""),
+            intent=data.get("intent", "general"),
         )
 
 
