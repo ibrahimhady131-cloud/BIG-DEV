@@ -11,7 +11,7 @@ dependencies = [
     "redis[hiredis]>=5.0,<6",
     "nats-py>=2.7,<3",
     "pyjwt>=2.8,<3",
-    "h3>=3.7,<4",
+    "h3>=4.0,<5",
     "uuid7>=0.1,<1",
 ]
 
