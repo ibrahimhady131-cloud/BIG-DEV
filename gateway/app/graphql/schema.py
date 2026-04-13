@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import strawberry
 
@@ -434,7 +434,7 @@ class Mutation:
             insurance_fee_egp=data.get("insurance_fee_egp", 0.0),
             valid_until=datetime.fromisoformat(str(data["valid_until"]))
             if "valid_until" in data
-            else datetime.now(),
+            else datetime.now(UTC),
         )
 
     @strawberry.mutation

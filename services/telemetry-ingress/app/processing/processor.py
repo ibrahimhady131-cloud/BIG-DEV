@@ -129,7 +129,7 @@ class MessageProcessor:
         previous_hub = self._geofence_states.get(msg.truck_id)
 
         if current_hub != previous_hub:
-            if previous_hub is not None and current_hub is None:
+            if previous_hub is not None:
                 events.append(
                     {
                         "type": "geofence_exited",
@@ -139,7 +139,7 @@ class MessageProcessor:
                         "longitude": msg.longitude,
                     }
                 )
-            elif current_hub is not None:
+            if current_hub is not None:
                 events.append(
                     {
                         "type": "geofence_entered",
