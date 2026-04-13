@@ -456,8 +456,9 @@ def test_full_lifecycle_pricing():
         dest_region="EG-OCT",
     )
     assert quote.total_egp > 0
-    assert quote.toll_cost_egp == 180.0  # 120 base * 1.5 trailer multiplier
-    assert quote.fuel_cost_egp > 1000  # 142.3 km * 7.5 * weight factor
+    assert quote.toll_cost_egp == 480.0  # 320 base * 1.5 trailer multiplier
+    assert quote.fuel_cost_egp > 3000  # 142.3 km * 22.0 * weight factor
+    assert 4500 <= quote.total_egp <= 6500  # 2025 market rate for Sokhna->October
 
     # Cairo -> Alexandria
     quote_alex = pricing.calculate_quote(
@@ -467,5 +468,5 @@ def test_full_lifecycle_pricing():
         origin_region="EG-CAI",
         dest_region="EG-ALX",
     )
-    assert quote_alex.toll_cost_egp == 180.0  # Full load multiplier = 1.0
+    assert quote_alex.toll_cost_egp == 450.0  # Full load multiplier = 1.0
     assert quote_alex.total_egp > quote.toll_cost_egp

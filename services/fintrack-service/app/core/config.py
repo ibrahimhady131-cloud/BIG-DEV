@@ -23,10 +23,10 @@ class Settings(BaseSettings):
     PAYMOB_API_KEY: str = ""
     PAYMOB_INTEGRATION_ID: str = ""
 
-    # Pricing
+    # Pricing (2025 calibrated)
     SERVICE_FEE_PERCENTAGE: float = 0.08  # 8% platform fee
-    INSURANCE_RATE_PER_KM: float = 0.5  # EGP per km
-    BASE_FUEL_RATE_PER_KM: float = 4.5  # EGP per km (diesel)
+    INSURANCE_RATE_PER_KM: float = 1.5  # EGP per km (cargo insurance)
+    BASE_FUEL_RATE_PER_KM: float = 14.0  # EGP per km (diesel, 2025 post-subsidy)
 
     model_config = {"env_prefix": "FINTRACK_", "env_file": ".env"}
 

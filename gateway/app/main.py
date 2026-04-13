@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -9,7 +10,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from strawberry.fastapi import GraphQLRouter
 
-from .graphql.schema import schema
+from .graphql.schema import _client, schema
+
+
+def _parse_cors_origins() -> list[str]:
+    """Parse GATEWAY_CORS_ORIGINS env var into a list of allowed origins."""
+    raw = os.getenv("GATEWAY_CORS_ORIGINS", "http://localhost:3000")
+    return [o.strip() for o in raw.split(",") if o.strip()]
 
 
 @asynccontextmanager
@@ -17,6 +24,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Application lifecycle manager."""
     print("Starting Naql.ai GraphQL Gateway on port 4000")
     yield
+    # Close the shared httpx client on shutdown
+    if _client is not None:
+        await _client.close()
     print("Shutting down GraphQL Gateway")
 
 
@@ -28,9 +38,10 @@ app = FastAPI(
 )
 
 # CORS middleware for mobile/web clients
+_cors_origins = _parse_cors_origins()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure per environment in production
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
