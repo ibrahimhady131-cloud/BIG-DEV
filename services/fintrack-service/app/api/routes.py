@@ -86,6 +86,11 @@ async def create_escrow(request: EscrowCreateRequest) -> EscrowResponse:
 
     # Hold funds from payer: move from available to held
     balance = _get_or_create_balance(request.payer_user_id)
+    if balance["available_egp"] < request.amount_egp:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Insufficient available balance for escrow hold",
+        )
     balance["available_egp"] -= request.amount_egp
     balance["held_egp"] += request.amount_egp
 
@@ -124,6 +129,7 @@ async def release_escrow(request: EscrowReleaseRequest) -> EscrowResponse:
     # Release to recipient
     payer_balance = _get_or_create_balance(escrow["payer_user_id"])
     payer_balance["held_egp"] -= escrow["amount_egp"]
+    payer_balance["total_egp"] -= escrow["amount_egp"]
 
     recipient_balance = _get_or_create_balance(request.release_to_user_id)
     recipient_balance["available_egp"] += escrow["amount_egp"]

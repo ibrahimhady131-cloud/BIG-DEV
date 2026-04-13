@@ -173,6 +173,13 @@ class ServiceClient:
             f"{settings.FLEET_SERVICE_URL}/api/v1/trucks/{truck_id}",
         )
 
+    async def get_balance(self, user_id: str) -> ToolResult:
+        """Get user account balance."""
+        return await self._call(
+            "GET",
+            f"{settings.FINTRACK_SERVICE_URL}/api/v1/balance/{user_id}",
+        )
+
 
 # Global service client
 service_client = ServiceClient()
