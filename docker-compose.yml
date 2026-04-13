@@ -40,7 +40,7 @@ services:
     image: redis/redis-stack:latest
     ports:
       - "6379:6379"     # Redis
-      - "8001:8001"     # RedisInsight
+      - "8101:8001"     # RedisInsight (remapped to avoid conflict with identity-service)
     volumes:
       - redis_data:/data
     healthcheck:

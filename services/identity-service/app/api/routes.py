@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from passlib.hash import bcrypt
 
-from naql_common.auth import AuthManager, UserRole
+from naql_common.auth import AuthManager, Permission, UserRole
 
 from ..core.config import settings
 from ..core.deps import get_current_user, require_permission
@@ -165,7 +165,7 @@ async def update_user(
 async def verify_kyc(
     user_id: str,
     request: KYCVerifyRequest,
-    _current_user: Annotated[dict, Depends(require_permission)],
+    _current_user: Annotated[dict, Depends(require_permission(Permission.USERS_WRITE))],
 ) -> UserResponse:
     """Verify or reject a user's KYC status. Requires admin permission."""
     user = _users_db.get(user_id)

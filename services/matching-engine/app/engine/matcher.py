@@ -6,6 +6,7 @@ nearby truck lookups, combined with a multi-factor scoring system.
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass, field
 
 from naql_common.geo import Coordinate, get_h3_ring
@@ -183,12 +184,15 @@ class GeoMatcher:
             if distance > radius_km:
                 continue
 
-            truck.distance_km = round(distance, 2)
-            # Estimate ETA: avg speed 40 km/h in urban, 80 km/h highway
+            # Create a copy to avoid mutating the shared position index
             avg_speed = 50.0  # Blended average for Egypt
-            truck.eta_minutes = max(1, int((distance / avg_speed) * 60))
+            matched = dataclasses.replace(
+                truck,
+                distance_km=round(distance, 2),
+                eta_minutes=max(1, int((distance / avg_speed) * 60)),
+            )
 
-            candidates.append(truck)
+            candidates.append(matched)
 
         return candidates
 

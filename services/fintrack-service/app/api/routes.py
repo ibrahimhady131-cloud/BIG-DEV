@@ -84,8 +84,9 @@ async def create_escrow(request: EscrowCreateRequest) -> EscrowResponse:
     """Create an escrow hold for a shipment payment."""
     escrow_id = f"ESC-{uuid.uuid4().hex[:8].upper()}"
 
-    # Hold funds from payer
+    # Hold funds from payer: move from available to held
     balance = _get_or_create_balance(request.payer_user_id)
+    balance["available_egp"] -= request.amount_egp
     balance["held_egp"] += request.amount_egp
 
     _escrows_db[escrow_id] = {
