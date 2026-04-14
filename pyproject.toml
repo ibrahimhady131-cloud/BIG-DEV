@@ -5,6 +5,17 @@ description = "Naql.ai - Autonomous Logistics Ecosystem for Egypt"
 readme = "README.md"
 requires-python = ">=3.12"
 license = {text = "Proprietary"}
+dependencies = [
+    "asyncpg>=0.29,<1",
+    "bcrypt>=4.0,<5",
+    "email-validator>=2.0,<3",
+    "fastapi>=0.110,<1",
+    "pydantic>=2.6,<3",
+    "pydantic-settings>=2.2,<3",
+    "pyjwt>=2.8,<3",
+    "sqlalchemy>=2.0,<3",
+    "uvicorn[standard]>=0.29,<1",
+]
 
 [tool.ruff]
 target-version = "py312"

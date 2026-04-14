@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from sqlalchemy import text
 
 from naql_common.db.deps import close_all, init_cockroach
 
@@ -17,15 +18,14 @@ from .core.config import settings
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Application lifecycle manager."""
     print(f"Starting {settings.SERVICE_NAME} on port {settings.SERVICE_PORT}")
-    # Initialize database connection
-    if settings.DATABASE_URL and settings.DATABASE_URL != "sqlite://":
-        try:
-            init_cockroach(settings.DATABASE_URL)
-            print(f"  Connected to CockroachDB: {settings.DATABASE_URL.split('@')[-1]}")
-        except Exception as e:
-            print(f"  WARNING: CockroachDB not available ({e}), using in-memory store")
-    else:
-        print("  Using in-memory store (no DATABASE_URL configured)")
+    if not settings.DATABASE_URL or settings.DATABASE_URL == "sqlite://":
+        msg = "Identity Service requires DATABASE_URL or IDENTITY_DATABASE_URL"
+        raise RuntimeError(msg)
+
+    db = init_cockroach(settings.DATABASE_URL)
+    async with db.engine.connect() as conn:
+        await conn.execute(text("SELECT 1"))
+    print(f"  Connected to database: {settings.DATABASE_URL.split('@')[-1]}")
     yield
     # Shutdown
     await close_all()
