@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, Real, Text
+from sqlalchemy import Boolean, DateTime, Float, Integer, Text
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -34,13 +34,13 @@ class TruckPosition(Base):
     # Position
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
     longitude: Mapped[float] = mapped_column(Float, nullable=False)
-    altitude_m: Mapped[float | None] = mapped_column(Real, nullable=True)
-    accuracy_m: Mapped[float | None] = mapped_column(Real, nullable=True)
+    altitude_m: Mapped[float | None] = mapped_column(Float, nullable=True)
+    accuracy_m: Mapped[float | None] = mapped_column(Float, nullable=True)
     h3_index: Mapped[str] = mapped_column(Text, nullable=False)
 
     # Motion
-    speed_kmh: Mapped[float] = mapped_column(Real, nullable=False, default=0)
-    heading: Mapped[float | None] = mapped_column(Real, nullable=True)
+    speed_kmh: Mapped[float] = mapped_column(Float, nullable=False, default=0)
+    heading: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # Network
     signal_strength: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -65,20 +65,20 @@ class TruckTelemetry(Base):
 
     # Engine
     engine_rpm: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    engine_temp_c: Mapped[float | None] = mapped_column(Real, nullable=True)
-    fuel_level_pct: Mapped[float | None] = mapped_column(Real, nullable=True)
-    fuel_rate_lph: Mapped[float | None] = mapped_column(Real, nullable=True)
-    odometer_km: Mapped[float | None] = mapped_column(Real, nullable=True)
+    engine_temp_c: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fuel_level_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fuel_rate_lph: Mapped[float | None] = mapped_column(Float, nullable=True)
+    odometer_km: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # Diagnostics
-    battery_voltage: Mapped[float | None] = mapped_column(Real, nullable=True)
+    battery_voltage: Mapped[float | None] = mapped_column(Float, nullable=True)
     dtc_codes: Mapped[list[str] | None] = mapped_column(ARRAY(Text), nullable=True)
     check_engine: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
 
     # Environment
-    cargo_temp_c: Mapped[float | None] = mapped_column(Real, nullable=True)
-    ambient_temp_c: Mapped[float | None] = mapped_column(Real, nullable=True)
-    humidity_pct: Mapped[float | None] = mapped_column(Real, nullable=True)
+    cargo_temp_c: Mapped[float | None] = mapped_column(Float, nullable=True)
+    ambient_temp_c: Mapped[float | None] = mapped_column(Float, nullable=True)
+    humidity_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # Driving behavior
     harsh_braking: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
@@ -135,9 +135,9 @@ class DrivingViolation(Base):
     violation_type: Mapped[str] = mapped_column(Text, nullable=False)
     severity: Mapped[str] = mapped_column(Text, nullable=False)
 
-    speed_kmh: Mapped[float | None] = mapped_column(Real, nullable=True)
-    speed_limit_kmh: Mapped[float | None] = mapped_column(Real, nullable=True)
-    deviation_km: Mapped[float | None] = mapped_column(Real, nullable=True)
+    speed_kmh: Mapped[float | None] = mapped_column(Float, nullable=True)
+    speed_limit_kmh: Mapped[float | None] = mapped_column(Float, nullable=True)
+    deviation_km: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     latitude: Mapped[float] = mapped_column(Float, nullable=False)
     longitude: Mapped[float] = mapped_column(Float, nullable=False)
