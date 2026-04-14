@@ -39,7 +39,7 @@ The frontend runs via the "Start application" workflow:
 
 ## Key Config Changes for Replit
 - `frontend/package.json`: dev/start scripts use `-p 5000 -H 0.0.0.0`
-- `frontend/next.config.ts`: `allowedDevOrigins` set to `*.replit.dev` for HMR support
+- `frontend/next.config.ts`: `allowedDevOrigins` includes the active Replit preview domain plus Replit wildcard domains for dev HMR support
 
 ## Environment Variables Needed (for full backend)
 See `.env.example` for all required variables:
