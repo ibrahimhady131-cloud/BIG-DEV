@@ -6,6 +6,7 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import APIRouter
+from pydantic import BaseModel
 
 from ..agents.naql_brain import AgentContext
 from ..memory.vector_store import vector_memory
@@ -16,14 +17,22 @@ router = APIRouter(prefix="/api/v1", tags=["agent"])
 _sessions: dict[str, list[dict]] = {}
 
 
+class ChatRequest(BaseModel):
+    """Request body for the chat endpoint."""
+
+    user_id: str
+    message: str
+    session_id: str | None = None
+    language: str = "en"
+
+
 @router.post("/chat")
-async def chat(
-    user_id: str,
-    message: str,
-    session_id: str | None = None,
-    language: str = "en",
-) -> dict:
+async def chat(body: ChatRequest) -> dict:
     """Send a message to the Naql.ai agent and get a response."""
+    user_id = body.user_id
+    message = body.message
+    session_id = body.session_id
+    language = body.language
     if session_id is None:
         session_id = str(uuid.uuid4())
 

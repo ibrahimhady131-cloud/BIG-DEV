@@ -10,7 +10,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from strawberry.fastapi import GraphQLRouter
 
-from .graphql.schema import _client, schema
+from .graphql import schema as schema_module
+from .graphql.schema import schema
 
 
 def _parse_cors_origins() -> list[str]:
@@ -25,8 +26,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     print("Starting Naql.ai GraphQL Gateway on port 4000")
     yield
     # Close the shared httpx client on shutdown
-    if _client is not None:
-        await _client.close()
+    if schema_module._client is not None:
+        await schema_module._client.close()
     print("Shutting down GraphQL Gateway")
 
 
